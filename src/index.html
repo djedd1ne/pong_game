@@ -3,14 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three js</title>
+    <title>threejs</title>
     <style>
-        body {
-            margin: 0
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* no scroll bars */
+        }
+        canvas {
+            display: block;
         }
     </style>
-</head>
+    </head>
 <body>
-    <script src="./js/scripts.js" type="module"></script>
+    <canvas id="canvas"></canvas>
+    <script src="./js/scripts_1.js" type="module"></script>
 </body>
-</html>   
+</html>
