@@ -192,6 +192,20 @@ function updateBall(){
     ballVelocity
 }
 
+let     randomAngle = Math.random() * Math.PI * 2; //random angle in radians
+
+function updateBall(){
+    ballVelocity.set(Math.cos(randomAngle) * randomSpeed, Math.sin(randomAngle) * randomSpeed);
+    sphere.position.x += ballVelocity.x * delta;
+    sphere.position.y += ballVelocity.y * delta;
+    if (sphere.position.y >= halfBoardHeight - radius || sphere.position.y <= -halfBoardHeight + radius) {
+        ballVelocity.y *= -1;
+    }
+    if (sphere.position.x >= halfBoardWidth - radius || sphere.position.x <= -halfBoardWidth + radius) {
+        ballVelocity.x *= -1;
+    }
+}
+
 function animateGame(){
     updatePaddles();
     controls.update();
