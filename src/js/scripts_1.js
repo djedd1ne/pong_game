@@ -16,21 +16,23 @@ let sphere;
 let controls;
 let clock;
 let delta;
-
+let paddleCenterDistance;
+let ballVelocity = new THREE.Vector3(0, 0, 0);
 
 
 //assigned
-let boardWidth = 30;
-let boardHeight = 15;
+let boardWidth = 40;
+let boardHeight = 30;
 let halfBoardWidth = boardWidth / 2;
 let halfBoardHeight = boardHeight / 2;
-let thickness = 0.25;
-let paddleLength = 2;
-let paddleWidth = 0.4;
+let thickness = 1;
+let paddleLength = 4;
+let paddleWidth = 1;
 let halfPaddleLength = paddleLength / 2;
 let distance = 1;
-let radius = 0.2;
-let paddleSpeed = 10;
+let radius = 0.3;
+let paddleSpeed = 20;
+let randomSpeed = 20.0;
 
 //perspective camera
 let fov = 40;
@@ -56,13 +58,13 @@ function initScene() {
             near,
             far
             );
-    camera.position.set(0, -45, 15);
+    camera.position.set(0, -55, 30);
     camera.lookAt(0, 0, 0);
     controls = new OrbitControls(camera, renderer.domElement);
 }
 
 function initPlane(){
-    planeGeo =  new THREE.PlaneGeometry(boardWidth, boardHeight,);
+    planeGeo =  new THREE.PlaneGeometry(boardWidth, boardHeight);
     planeMaterial = new THREE.MeshStandardMaterial({
         color: 0xFFFFFF,
         side: THREE.DoubleSide});
@@ -71,13 +73,20 @@ function initPlane(){
     scene.add(plane);
 }
 
+
 function initBall(){
     sphereGeo = new THREE.SphereGeometry(radius);
     sphereMaterial = new THREE.MeshStandardMaterial({color: 0xFF0000});
     sphere = new THREE.Mesh(sphereGeo, sphereMaterial);
     sphere.castShadow = true;
     scene.add(sphere);
+    resetBall();
+}
+
+function resetBall(){
     sphere.position.set(0, 0, radius);
+    let randomAngle = Math.random() * Math.PI * 2; //random angle in radians
+    ballVelocity.set(Math.cos(randomAngle) * randomSpeed, Math.sin(randomAngle) * randomSpeed);
 }
 
 function initPaddle(){
@@ -169,7 +178,6 @@ function initVariables(){
 }
 
 function updatePaddles(){
-    delta = clock.getDelta();
     if (leftPaddleMoveUp){
         leftPaddle.position.y += paddleSpeed * delta;
         leftPaddle.position.y = Math.min(halfBoardHeight - halfPaddleLength, leftPaddle.position.y);
@@ -188,26 +196,61 @@ function updatePaddles(){
     }
 }
 
-function updateBall(){
-    ballVelocity
+paddleCenterDistance = halfBoardWidth - distance - paddleWidth / 2;
+function leftPaddleCollision(){
+    return (sphere.position.y + radius >= leftPaddle.position.y - halfPaddleLength &&
+        sphere.position.y - radius <= leftPaddle.position.y + halfPaddleLength &&
+        sphere.position.x - radius <= leftPaddle.position.x + paddleWidth / 2 &&
+        ballVelocity.x < 0);
 }
 
-let     randomAngle = Math.random() * Math.PI * 2; //random angle in radians
+function rightPaddleCollision(){
+    return (sphere.position.y + radius >= rightPaddle.position.y - halfPaddleLength &&
+        sphere.position.y - radius <= rightPaddle.position.y + halfPaddleLength &&
+        sphere.position.x + radius >= rightPaddle.position.x - paddleWidth / 2 &&
+        ballVelocity.x > 0);
+}
 
-function updateBall(){
-    ballVelocity.set(Math.cos(randomAngle) * randomSpeed, Math.sin(randomAngle) * randomSpeed);
+function collisionDetection(){
+    //moving towards the left paddle
+    if (leftPaddleCollision()) {
+        const collisionPoint = (sphere.position.y - radius - (leftPaddle.position.y + halfPaddleLength)) / paddleLength;
+        const angle = Math.PI / 4 * collisionPoint;
+        const xComponent = Math.cos(angle) * -ballVelocity.x - Math.sin(angle) * ballVelocity.y;
+        const yComponent = Math.sin(angle) * -ballVelocity.x + Math.cos(angle) * ballVelocity.y;
+        ballVelocity.set(xComponent, yComponent);
+    }
+    //moving towards the right paddle
+    else if (rightPaddleCollision()) {
+        const collisionPoint = (sphere.position.y + radius - (rightPaddle.position.y + halfPaddleLength)) / paddleLength;
+        const angle = Math.PI / 4 * collisionPoint + Math.PI / 2;
+        const xComponent = Math.cos(angle) * -ballVelocity.x - Math.sin(angle) * ballVelocity.y;
+        const yComponent = Math.sin(angle) * -ballVelocity.x + Math.cos(angle) * ballVelocity.y;
+        ballVelocity.set(xComponent, yComponent);
+    }
+}
+
+function updateBall(delta){
     sphere.position.x += ballVelocity.x * delta;
     sphere.position.y += ballVelocity.y * delta;
-    if (sphere.position.y >= halfBoardHeight - radius || sphere.position.y <= -halfBoardHeight + radius) {
-        ballVelocity.y *= -1;
+
+    if (sphere.position.x <= -halfBoardWidth + radius || sphere.position.x >= halfBoardWidth - radius) {
+        resetBall();
     }
-    if (sphere.position.x >= halfBoardWidth - radius || sphere.position.x <= -halfBoardWidth + radius) {
-        ballVelocity.x *= -1;
+    if (sphere.position.y >= halfBoardHeight - radius) {
+        ballVelocity.y *= -1;
+        sphere.position.y =  halfBoardHeight - radius;
+    } else if (sphere.position.y <= -halfBoardHeight + radius) {
+        ballVelocity.y *= -1;
+        sphere.position.y = -halfBoardHeight + radius;
     }
 }
 
 function animateGame(){
+    delta = clock.getDelta();
     updatePaddles();
+    collisionDetection();
+    updateBall(delta);
     controls.update();
     renderer.render(scene, camera);
 }
@@ -220,16 +263,3 @@ function play(){
 }
 
 play();
-
-// function animateGame(){
-//     updatePaddles();
-//     controls.update();
-//     renderer.render(scene, camera);
-// }
-
-// function play(){
-//     initVariables();
-//     init();
-//     addEventListners();
-//     renderer.setAnimationLoop(animateGame);
-// }
